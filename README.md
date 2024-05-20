@@ -67,27 +67,28 @@ These tools must be installed and accessible in your system's PATH for TrashReco
    ```
 3. Install the required tools and dependencies:
 
-| Tool            | Installation Command                                                                 |
-|-----------------|--------------------------------------------------------------------------------------|
-| Python 3.x      | Already installed or `sudo apt-get install python3`                                  |
-| pip             | `sudo apt-get install python3-pip`                                                   |
-| puredns         | `go install -v github.com/d3mondev/puredns/v2@latest`                                |
-| httpx           | `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`                   |
-| dnsx            | `go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest`                     |
-| smap            | `go install -v github.com/s0md3v/smap/cmd/smap@latest`                               |
-| aquatone        | `go install -v github.com/Abhinandan-Khurana/aquatone@v1.7.2`                        |
-| waybackurls     | `go install -v github.com/tomnomnom/waybackurls@latest`                              |
-| gf              | `go install -v github.com/tomnomnom/gf@latest`                                       |
-| subzy           | `go install -v github.com/LukaSikic/subzy@latest`                                    |
-| subfinder       | `go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest`        |
-| amass           | `go install -v github.com/owasp-amass/amass/v3.19.2/...@master`                      |
-| assetfinder     | `go install -v github.com/tomnomnom/assetfinder@latest`                              |
-| waymore         | `pip install waymore --break-system-packages`                                        |
-| massdns         | `git clone https://github.com/blechschmidt/massdns.git && cd massdns && make && make install` |
-| gf-patterns     | `git clone https://github.com/1ndianl33t/Gf-Patterns /root/.gf`                      |
+| Tool            | Installation Command                                                                 | Path to Copy Wordlist |
+|-----------------|--------------------------------------------------------------------------------------|-----------------------|
+| Python 3.x      | Already installed or `sudo apt-get install python3`                                  |                       |
+| pip             | `sudo apt-get install python3-pip`                                                   |                       |
+| puredns         | `go install -v github.com/d3mondev/puredns/v2@latest`                                | `/root/.config/puredns/resolvers.txt` |
+| httpx           | `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`                   |                       |
+| dnsx            | `go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest`                     |                       |
+| smap            | `go install -v github.com/s0md3v/smap/cmd/smap@latest`                               |                       |
+| aquatone        | `go install -v github.com/Abhinandan-Khurana/aquatone@v1.7.2`                        |                       |
+| waybackurls     | `go install -v github.com/tomnomnom/waybackurls@latest`                              |                       |
+| gf              | `go install -v github.com/tomnomnom/gf@latest`                                       |                       |
+| subzy           | `go install -v github.com/LukaSikic/subzy@latest`                                    |                       |
+| subfinder       | `go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest`        |                       |
+| amass           | `go install -v github.com/owasp-amass/amass/v3.19.2/...@master`                      |                       |
+| assetfinder     | `go install -v github.com/tomnomnom/assetfinder@latest`                              |                       |
+| waymore         | `pip install waymore --break-system-packages`                                        |                       |
+| massdns         | `git clone https://github.com/blechschmidt/massdns.git && cd massdns && make && make install` | `/app/subdomains-top1million-110000.txt` |
+| gf-patterns     | `git clone https://github.com/1ndianl33t/Gf-Patterns /root/.gf`                      |                       |
 
 4. Ensure the external tools listed in the Prerequisites section are installed and in your system's PATH.
 
 ## Usage
 
 To start using TrashRecon, run the following command from the TrashRecon directory:
+
