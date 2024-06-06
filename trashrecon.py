@@ -25,7 +25,7 @@ def run_command(command, cwd=None):
 
 def phase_one(domain_path, domain):
     message = "Starting Phase 1: Subdomain Enumeration."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
 
     domain_parts = domain.split('.')
     base_domain = domain_parts[0]
@@ -60,7 +60,7 @@ def phase_one(domain_path, domain):
 
 def phase_five(domain_path, domain):
     message = "Starting Phase 5: GF Enumeration."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
 
     gf_folder = os.path.join(domain_path, "GF")
     os.makedirs(gf_folder, exist_ok=True)
@@ -71,26 +71,26 @@ def phase_five(domain_path, domain):
 
 def phase_two(domain_path):
     message = "Starting Phase 2: Extracting A and CNAME Records."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | dnsx -a -resp -nc | sort -u > {os.path.join(domain_path, 'a_records.txt')}", cwd=domain_path)
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | dnsx -silent -cname -resp -nc > {os.path.join(domain_path, 'cname.txt')}", cwd=domain_path)
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | dnsx -a -ro -nc | sort -u > {os.path.join(domain_path, 'IPs.txt')}", cwd=domain_path)
 
 def phase_three(domain_path, domain):
     message = "Starting Phase 3: Port Scanning."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
     smap_output = os.path.join(domain_path, "smap.json")
     run_command(f"smap -Pn -p0-65535 -iL {os.path.join(domain_path, 'IPs.txt')} -oJ {smap_output}", cwd=domain_path)
 
 def phase_four(domain_path, domain):
     message = "Starting Phase 4: Taking Screenshots."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
     aquatone_folder = os.path.join(domain_path, "aquatone")
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | aquatone -chrome-path /usr/bin/chromium -out {aquatone_folder}", cwd=domain_path)
 
 def phase_six(domain_path, domain):
     message = "Starting Phase 6: Checking for Subdomains Takeover(subzy)."
-    run_command(f'cowsay "{message}"')
+    run_command(f'/usr/games/cowthink "{message}"')
     subzy_output = os.path.join(domain_path, "subdomains_takeover.txt")
     run_command(f"subzy run --targets {os.path.join(domain_path, 'workingdomains.txt')} > {subzy_output}", cwd=domain_path)
 
