@@ -56,7 +56,7 @@ These tools must be installed and accessible in your system's PATH for TrashReco
    ```
 - 🚧 Make sure to change ```/path/on/host``` on the above command 🚧
 
-  
+---
 ### Manual Installation Or If you want to run it locally (Not recommended)
 
 1. Clone the TrashRecon repository:
@@ -91,8 +91,13 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 4. Ensure the external tools listed in the Prerequisites section are installed and in your system's PATH.
 
 ## Usage
+1. To run from the docker container:
 
-To start using TrashRecon, run the following command from the TrashRecon directory:
+   ```bash
+      docker run -it -v /path/on/host:/root/TrashRecon/ trashrecon
+   ```
+
+3. To start using TrashRecon on host, run the following command from the TrashRecon directory:
 
 ```bash
    python3 trashrecon.py
