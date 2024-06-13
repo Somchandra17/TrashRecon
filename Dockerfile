@@ -7,10 +7,14 @@ RUN apt update && apt -y install python3 python3-pip cowsay chromium wget
 # Install Python dependencies
 RUN pip install pytest-shutil waymore --break-system-packages
 
+# Install secretx
+RUN git clone https://github.com/Somchandra17/secretx.git
 # Clone and install massdns
 RUN git clone https://github.com/blechschmidt/massdns.git && cd massdns && make && make install
+RUN cd .. && rm -rf massdns
 
 # Install Go packages
+RUN go install -v github.com/projectdiscovery/katana/cmd/katana@latest
 RUN go install -v github.com/OWASP/Amass/v3/cmd/amass@v3.19.2
 RUN go install -v github.com/d3mondev/puredns/v2@latest
 RUN go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
