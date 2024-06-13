@@ -1,17 +1,18 @@
 # TrashRecon
 
-TrashRecon is a Python-based reconnaissance tool designed to automate the process of subdomain enumeration, extracting A and CNAME records, running Smap on records, taking screenshots of endpoints, and more. It's built for security researchers and penetration testers to streamline the initial phases of information gathering.
+TrashRecon is a comprehensive Python-based reconnaissance framework designed for security researchers and penetration testers. It automates various phases of the information gathering process, enhancing the efficiency and depth of security assessments.
 
 ## Features
 
-- Subdomain enumeration using `puredns`, `subfinder`, `amass`, and `assetfinder`.
-- HTTP status check and sorting using `httpx`.
-- A and CNAME record extraction with `dnsx`.
-- Port scanning with `smap`.
-- Screenshot capture of live domains using `aquatone`.
-- URL extraction using `waybackurls` and `waymore`.
-- Vulnerability pattern matching using `gf`.
-- Subdomain takeover detection using `subzy`.
+- Subdomain Enumeration: Utilizes tools like puredns, subfinder, amass, assetfinder, waybackurls, and waymore to discover subdomains.
+- HTTP Status Check and Sorting: Uses httpx to check the availability and status of discovered domains.
+- DNS Record Extraction: Extracts A and CNAME records using dnsx.
+- Port Scanning: Conducts thorough port scans on identified IPs using smap.
+- Screenshot Capture: Takes screenshots of live domains using aquatone.
+- Vulnerability Pattern Search: Searches for common vulnerability patterns in URLs using gf.
+- Subdomain Takeover Checking: Checks for vulnerable subdomains using subzy.
+- Endpoint Crawling: Crawls endpoints to gather more data using katana.
+- API Key Scanning: Optionally scans for exposed API keys using secretx, providing an option to skip this resource-intensive task.
 
 ## Prerequisites
 
