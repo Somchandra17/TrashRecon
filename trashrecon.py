@@ -8,7 +8,7 @@ import time
 # Constants
 RESOLVERS_PATH = os.path.expanduser("~/.config/puredns/resolvers.txt")
 WORDLIST_PATH = os.path.expanduser("~/app/subdomains-top1million-110000.txt")
-TOOLS = ["puredns", "httpx", "dnsx", "smap", "aquatone", "waybackurls", "gf", "massdns", "subzy", "waymore", "assetfinder", "subfinder", "amass"]
+TOOLS = ["puredns", "httpx", "dnsx", "smap", "aquatone", "waybackurls", "gf", "massdns", "subzy", "waymore", "assetfinder", "subfinder", "amass", "katana", "secretx"]
 
 def create_domain_folder(domain):
     domain_path = os.path.expanduser(f"~/TrashRecon/{domain}")
