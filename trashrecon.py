@@ -94,6 +94,22 @@ def phase_six(domain_path, domain):
     subzy_output = os.path.join(domain_path, "subdomains_takeover.txt")
     run_command(f"subzy run --targets {os.path.join(domain_path, 'workingdomains.txt')} > {subzy_output}", cwd=domain_path)
 
+def phase_seven(domain_path, domain):
+    message = "Starting Phase 7: Crawling Endpoints."
+    run_command(f'/usr/games/cowthink "{message}"')
+    katana_output = os.path.join(domain_path, "katana_crawl.txt")
+    run_command(f"katana -u {os.path.join(domain_path, 'workingdomains.txt')} -d 6 -jsl -jc -o {katana_output}", cwd=domain_path)
+
+def phase_eight(domain_path, domain):
+    proceed = input("Phase 8 involves looking for exposed API keys, which can be resource-intensive. Do you want to proceed? (yes/no): ")
+    if proceed.lower() == 'yes':
+        message = "Starting Phase 8: Looking for exposed API keys."
+        run_command(f'/usr/games/cowthink "{message}"')
+        secretx_output = os.path.join(domain_path, "secretx_output.txt")
+        run_command(f"cd /app/secretx/ python3 secretx.py --list {os.path.join(domain_path, 'katana_crawl.txt')} --threads 60 --output {secretx_output}", cwd=domain_path)
+    else:
+        print("Skipping Phase 8: Looking for exposed API keys.")
+
 def summarize_results(domain_path):
     puredns_output = os.path.join(domain_path, "final_subdomains.txt")
     working_domains = os.path.join(domain_path, "workingdomains.txt")
@@ -129,7 +145,8 @@ def main():
   /      /   ) /   ) (_ ` /   )     /    |   /___) /   ' /   ) /   )    
 _/______/_____(___(_(__)_/___/_____/_____|__(___ _(___ _(___/_/___/_____
             Tools: puredns, httpx, dnsx, smap, aquatone, waybackurls, gf,
-                   massdns, subzy, waymore, assetfinder, subfinder, amass
+                  massdns, subzy, waymore, assetfinder, subfinder, amass,
+                  katana, secretx
           
 
     """)
@@ -146,6 +163,8 @@ _/______/_____(___(_(__)_/___/_____/_____|__(___ _(___ _(___/_/___/_____
     phase_four(domain_path, domain)
     phase_five(domain_path, domain)
     phase_six(domain_path, domain)
+    phase_seven(domain_path, domain)
+    phase_eight(domain_path, domain)
     
     summarize_results(domain_path)
     print(f"TrashRecon is terminated. Results stored in {domain_path}")
