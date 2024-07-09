@@ -91,7 +91,7 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 1. To run from the docker container:
 
    ```bash
-      docker run -it -v /path/on/host:/root/TrashRecon/ trashrecon
+      docker run -it -v /path/on/host:/root/TrashRecon/ 0xsom/trashrecon:latest
    ```
 
 3. To start using TrashRecon on host, run the following command from the TrashRecon directory:
