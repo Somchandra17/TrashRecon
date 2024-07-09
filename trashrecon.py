@@ -79,7 +79,7 @@ def phase_two(domain_path):
 def phase_three(domain_path, domain):
     message = "Starting Phase 3: Port Scanning."
     run_command(f'/usr/games/cowthink "{message}"')
-    smap_output = os.path.join(domain_path, "smap.json")
+    smap_output = os.path.join(domain_path, "port_scan.json")
     run_command(f"smap -Pn -p0-65535 -iL {os.path.join(domain_path, 'IPs.txt')} -oJ {smap_output}", cwd=domain_path)
 
 def phase_four(domain_path, domain):
@@ -97,7 +97,7 @@ def phase_six(domain_path, domain):
 def phase_seven(domain_path, domain):
     message = "Starting Phase 7: Crawling Endpoints."
     run_command(f'/usr/games/cowthink "{message}"')
-    katana_output = os.path.join(domain_path, "katana_crawl.txt")
+    katana_output = os.path.join(domain_path, "endpoints.txt")
     run_command(f"katana -u {os.path.join(domain_path, 'workingdomains.txt')} -d 6 -jsl -jc -o {katana_output}", cwd=domain_path)
 
 def phase_eight(domain_path, domain):
@@ -105,8 +105,8 @@ def phase_eight(domain_path, domain):
     if proceed.lower() == 'yes':
         message = "Starting Phase 8: Looking for exposed API keys."
         run_command(f'/usr/games/cowthink "{message}"')
-        secretx_output = os.path.join(domain_path, "secretx_output.txt")
-        run_command(f"cd /app/secretx/ python3 secretx.py --list {os.path.join(domain_path, 'katana_crawl.txt')} --threads 60 --output {secretx_output}", cwd=domain_path)
+        secretx_output = os.path.join(domain_path, "api.txt")
+        run_command(f"python3 secretx.py --list {os.path.join(domain_path, 'endpoints.txt')} --threads 60 --output {secretx_output}", cwd="/app/secretx/")
     else:
         print("Skipping Phase 8: Looking for exposed API keys.")
 
@@ -138,15 +138,15 @@ def animate():
 def main():
     global done
     print("""
-
-  ______                              ____                              
-    /                       /         /    )                            
----/------)__----__---__---/__-------/___ /----__----__----__----__-----
-  /      /   ) /   ) (_ ` /   )     /    |   /___) /   ' /   ) /   )    
-_/______/_____(___(_(__)_/___/_____/_____|__(___ _(___ _(___/_/___/_____
-            Tools: puredns, httpx, dnsx, smap, aquatone, waybackurls, gf,
-                  massdns, subzy, waymore, assetfinder, subfinder, amass,
-                  katana, secretx
+ ______   ______     ______     ______     __  __        ______     ______     ______     ______     __   __    
+/\__  _\ /\  == \   /\  __ \   /\  ___\   /\ \_\ \      /\  == \   /\  ___\   /\  ___\   /\  __ \   /\ "-.\ \   
+\/_/\ \/ \ \  __<   \ \  __ \  \ \___  \  \ \  __ \     \ \  __<   \ \  __\   \ \ \____  \ \ \/\ \  \ \ \-.  \  
+   \ \_\  \ \_\ \_\  \ \_\ \_\  \/\_____\  \ \_\ \_\     \ \_\ \_\  \ \_____\  \ \_____\  \ \_____\  \ \_\\"\_\ 
+    \/_/   \/_/ /_/   \/_/\/_/   \/_____/   \/_/\/_/      \/_/ /_/   \/_____/   \/_____/   \/_____/   \/_/ \/_/ 
+                                                                                                                
+                                                Tools: puredns, httpx, dnsx, smap, aquatone, waybackurls, gf,
+                                                      massdns, subzy, waymore, assetfinder, subfinder, amass,
+                                                      katana, secretx
           
 
     """)
