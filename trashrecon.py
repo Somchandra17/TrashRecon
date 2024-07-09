@@ -52,22 +52,28 @@ def phase_one(domain_path, domain):
     run_command(f"cat {os.path.join(domain_path, 'merged_way.txt')} | sed 's/{base_domain}.*$/{tld}/' | sed 's/https:\/\///' | sed 's/http:\/\///' | sort -u | uniq > {os.path.join(domain_path, 'way_domains.txt')}", cwd=domain_path)
     print("Done extracting unique domains from merged file.")
     # Combining all subdomains into one file and filtering unique entries
-    run_command(f"cat {os.path.join(domain_path, 'puredns.txt')} {os.path.join(domain_path, 'subfinder.txt')} {os.path.join(domain_path, 'amass.txt')} {os.path.join(domain_path, 'assetfinder.txt')} {os.path.join(domain_path, 'way_domains.txt')} | sort -u | uniq > {os.path.join(domain_path, 'final_subdomains.txt')}", cwd=domain_path)
+    run_command(f"cat {os.path.join(domain_path, 'puredns.txt')} {os.path.join(domain_path, 'subfinder.txt')} {os.path.join(domain_path, 'amass.txt')} {os.path.join(domain_path, 'assetfinder.txt')} {os.path.join(domain_path, 'way_domains.txt')} | sort -u | uniq > {os.path.join(domain_path, 'raw.txt')}", cwd=domain_path)
+    run_command(f"cat {os.path.join(domain_path, 'raw.txt')} | grep {domain} > {os.path.join(domain_path, 'final_subdomains.txt')}", cwd=domain_path)
     print("Done combining all subdomains into one file and filtering unique entries.")
     # Running httpx on the final list of subdomains
     run_command(f"cat {os.path.join(domain_path, 'final_subdomains.txt')} | httpx -mc 200,301,302,307,308 | sed 's/https:\/\///' | sort -u > {os.path.join(domain_path, 'workingdomains.txt')}", cwd=domain_path)
     print("Done running httpx on the final list of subdomains.")
 
 def phase_five(domain_path, domain):
-    message = "Starting Phase 5: GF Enumeration."
+    message = "Starting Phase 7: GF Enumeration."
     run_command(f'/usr/games/cowthink "{message}"')
 
     gf_folder = os.path.join(domain_path, "GF")
     os.makedirs(gf_folder, exist_ok=True)
     gf_patterns = ["xss", "idor", "lfi", "debug_logic", "img-traversal", "interestingEXT", "interestingparams", "interestingsubs", "jsvar", "rce", "redirect", "sqli", "ssrf", "ssti"]
+    
+    # Merging merged_way.txt and endpoints.txt
+    run_command(f"cat {os.path.join(domain_path, 'merged_way.txt')} {os.path.join(domain_path, 'endpoints.txt')} | sort -u | uniq > {os.path.join(domain_path, 'merged_endpoints.txt')}", cwd=domain_path)
+    print("Done merging merged_way.txt and endpoints.txt.")
+    
     for pattern in gf_patterns:
         output_file = os.path.join(gf_folder, f"{pattern}.txt")
-        run_command(f"cat {os.path.join(domain_path, 'merged_way.txt')} | gf {pattern} | sort -u > {output_file}", cwd=domain_path)
+        run_command(f"cat {os.path.join(domain_path, 'merged_endpoints.txt')} | gf {pattern} | sort -u > {output_file}", cwd=domain_path)
 
 def phase_two(domain_path):
     message = "Starting Phase 2: Extracting A and CNAME Records."
@@ -89,16 +95,30 @@ def phase_four(domain_path, domain):
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | aquatone -chrome-path /usr/bin/chromium -out {aquatone_folder}", cwd=domain_path)
 
 def phase_six(domain_path, domain):
-    message = "Starting Phase 6: Checking for Subdomains Takeover(subzy)."
+    message = "Starting Phase 5: Checking for Subdomains Takeover(subzy)."
     run_command(f'/usr/games/cowthink "{message}"')
     subzy_output = os.path.join(domain_path, "subdomains_takeover.txt")
     run_command(f"subzy run --targets {os.path.join(domain_path, 'workingdomains.txt')} > {subzy_output}", cwd=domain_path)
 
 def phase_seven(domain_path, domain):
-    message = "Starting Phase 7: Crawling Endpoints."
-    run_command(f'/usr/games/cowthink "{message}"')
-    katana_output = os.path.join(domain_path, "endpoints.txt")
-    run_command(f"katana -u {os.path.join(domain_path, 'workingdomains.txt')} -d 6 -jsl -jc -o {katana_output}", cwd=domain_path)
+    working_domains = os.path.join(domain_path, "workingdomains.txt")
+    try:
+        with open(working_domains, 'r') as file:
+            working_domains_count = len(file.readlines())
+    except FileNotFoundError:
+        working_domains_count = 0
+
+    print(f"Warning: Phase 7 can be time-consuming depending on the number of subdomains found ({working_domains_count} subdomains).")
+    proceed = input("Do you want to proceed with Phase 7: Crawling Endpoints? (yes/no): ")
+    if proceed.lower() == 'yes':
+        message = "Starting Phase 7: Crawling Endpoints."
+        run_command(f'/usr/games/cowthink "{message}"')
+        katana_output = os.path.join(domain_path, "endpoints.txt")
+        run_command(f"katana -u {os.path.join(domain_path, 'workingdomains.txt')} -d 5 -jsl -jc -o {katana_output}", cwd=domain_path)
+        return True
+    else:
+        print("Skipping Phase 7: Crawling Endpoints.")
+        return False
 
 def phase_eight(domain_path, domain):
     proceed = input("Phase 8 involves looking for exposed API keys, which can be resource-intensive. Do you want to proceed? (yes/no): ")
@@ -161,10 +181,11 @@ def main():
     phase_two(domain_path)
     phase_three(domain_path, domain)
     phase_four(domain_path, domain)
-    phase_five(domain_path, domain)
     phase_six(domain_path, domain)
-    phase_seven(domain_path, domain)
-    phase_eight(domain_path, domain)
+    
+    if phase_seven(domain_path, domain):
+        phase_five(domain_path, domain)
+        phase_eight(domain_path, domain)
     
     summarize_results(domain_path)
     print(f"TrashRecon is terminated. Results stored in {domain_path}")
