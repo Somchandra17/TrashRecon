@@ -41,21 +41,13 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 
 ### Using Docker (Easy to use and No setup!)
 
-1. Clone the TrashRecon repository:
+1. Pull the Docker image:
    ```bash
-   git clone https://github.com/Somchandra17/TrashRecon.git
+   docker pull 0xsom/trashrecon:latest
    ```
-2. Go to the directory:
+2. Run the Docker container:
    ```bash
-   cd TrashRecon
-   ```
-3. Build the Docker image:
-   ```bash
-   docker build -t trashrecon .
-   ```
-4. Run the Docker container:
-   ```bash
-   docker run -it -v /path/on/host:/root/TrashRecon/ trashrecon
+   docker run -it -v /path/on/host:/root/TrashRecon/ 0xsom/trashrecon:latest
    ```
 - 🚧 Make sure to change ```/path/on/host``` on the above command 🚧
 
