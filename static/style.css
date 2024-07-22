@@ -1,0 +1,190 @@
+/* General Styles */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+    font-family: 'Press Start 2P', cursive;
+    background: url('vecteezy_an-8-bit-retro-styled-pixel-art-illustration-of-a-merchant_28032349.png') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    animation: fadeIn 1s ease-in-out;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    max-width: 800px;
+    height: 60%;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1, h2 {
+    margin: 0;
+    padding: 10px;
+    font-size: 2.5em;
+    animation: glow 1.5s infinite alternate;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 20px;
+    width: 100%;
+}
+
+label, input, button {
+    margin: 10px;
+    font-size: 1.2em;
+}
+
+input {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 400px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+button {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 5px;
+    background: #ff6b6b;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    font-size: 1.5em;
+}
+
+button:hover {
+    background: #ff4757;
+}
+
+#terminal-output {
+    background-color: #000;
+    color: #0f0;
+    padding: 10px;
+    height: 300px;
+    overflow-y: scroll;
+    font-family: monospace;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    margin-top: 20px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+#phases {
+    margin-top: 20px;
+    animation: fadeIn 1s ease-in-out;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    margin: 10px 0;
+    font-size: 1.2em;
+    position: relative;
+    padding-left: 25px;
+}
+
+li:before {
+    content: '✔';
+    position: absolute;
+    left: 0;
+    color: #ff6b6b;
+    animation: bounce 1s infinite alternate;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 10px #ff6b6b, 0 0 20px #ff6b6b, 0 0 30px #ff6b6b, 0 0 40px #ff6b6b, 0 0 50px #ff6b6b, 0 0 60px #ff6b6b, 0 0 70px #ff6b6b;
+    }
+    to {
+        text-shadow: 0 0 20px #ff6b6b, 0 0 30px #ff6b6b, 0 0 40px #ff6b6b, 0 0 50px #ff6b6b, 0 0 60px #ff6b6b, 0 0 70px #ff6b6b, 0 0 80px #ff6b6b;
+    }
+}
+
+@keyframes bounce {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-10px);
+    }
+}
+
+/* Magic Animation */
+@keyframes magic {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+body {
+    background: linear-gradient(270deg, #ff6b6b, #ff4757, #1e3c72, #2a5298);
+    background-size: 800% 800%;
+    animation: magic 10s ease infinite;
+}
+
+/* Character Animation */
+.character {
+    position: absolute;
+    bottom: 1px;
+    right: 10px;
+    width: 300px;
+    height: 300px;
+    background: url('vecteezy_an-8-bit-retro-styled-pixel-art-illustration-of-a-merchant_28032349.png') no-repeat center center;
+    background-size: contain;
+    animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-20px);
+    }
+}
