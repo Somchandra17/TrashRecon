@@ -9,20 +9,53 @@
 </head>
 <body>
     <div class="container">
-        <h1>TrashRecon Status</h1>
-        <div id="terminal-output">
-            <!-- Terminal output will be displayed here -->
-        </div>
-        <div id="phases">
-            <h2>Phases</h2>
-            <ul>
-                <li>Phase 1: Subdomain Enumeration</li>
-                <li>Phase 2: Extracting A and CNAME Records</li>
-                <li>Phase 3: Running Smap</li>
-                <li>Phase 4: Taking Screenshots</li>
-                <li>Additional Phases: Waybackurls and GF Enumeration</li>
+        <div class="status-section">
+            <h2>Tool Execution Status</h2>
+            <ul id="status-list">
+                <li>Phase 1: Subdomain Enumeration - <span id="phase1-status">Pending</span></li>
+                <li>Phase 2: Extracting A and CNAME Records - <span id="phase2-status">Pending</span></li>
+                <li>Phase 3: Running Smap - <span id="phase3-status">Pending</span></li>
+                <li>Phase 4: Taking Screenshots - <span id="phase4-status">Pending</span></li>
+                <li>Additional Phases: Waybackurls and GF Enumeration - <span id="additional-status">Pending</span></li>
             </ul>
+            <button id="download-button" disabled>Download Results</button>
+            <p id="download-message" style="display: none; font-weight: bold;">Download is ready</p>
+        </div>
+        <div class="terminal-section">
+            <h2>Raw Terminal Output</h2>
+            <div id="terminal-output"></div>
+        </div>
+        <div class="tree-section">
+            <h2>Folder Structure</h2>
+            <div id="folder-structure"></div>
         </div>
     </div>
+    <script>
+        // JavaScript to handle real-time updates
+        const eventSource = new EventSource("{{ url_for('stream') }}");
+
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById(data.id).innerText = data.status;
+            if (data.output) {
+                const terminalOutput = document.getElementById('terminal-output');
+                terminalOutput.innerHTML += `<pre>${data.output}</pre>`;
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+            }
+            if (data.tree) {
+                document.getElementById('folder-structure').innerHTML = data.tree;
+            }
+            if (data.status === 'Completed') {
+                const downloadButton = document.getElementById('download-button');
+                downloadButton.disabled = false;
+                downloadButton.style.backgroundColor = '#ff6b6b';
+                downloadButton.style.cursor = 'pointer';
+                document.getElementById('download-message').style.display = 'block';
+                downloadButton.onclick = function() {
+                    window.location.href = "{{ url_for('download', domain=request.args.get('domain')) }}";
+                };
+            }
+        };
+    </script>
 </body>
 </html>
