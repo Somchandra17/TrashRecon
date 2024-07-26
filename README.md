@@ -14,40 +14,21 @@ TrashRecon is a comprehensive Python-based reconnaissance framework designed for
 - Endpoint Crawling: Crawls endpoints to gather more data using katana.
 - API Key Scanning: Scans for exposed API keys using secretx.
 
-## Prerequisites
-
-Before installing and running TrashRecon, ensure you have Python 3.x installed on your system. Additionally, TrashRecon depends on several external tools:
-
-- [puredns](https://github.com/d3mondev/puredns)
-- [httpx](https://github.com/projectdiscovery/httpx)
-- [dnsx](https://github.com/projectdiscovery/dnsx)
-- [smap](https://github.com/s0md3v/Smap)
-- [aquatone](https://github.com/Abhinandan-Khurana/aquatone)
-- [waybackurls](https://github.com/tomnomnom/waybackurls)
-- [gf](https://github.com/tomnomnom/gf)
-- [gf-patterns](https://github.com/1ndianl33t/Gf-Patterns)
-- [massdns](https://github.com/blechschmidt/massdns)
-- [subfinder](https://github.com/projectdiscovery/subfinder)
-- [amass](https://github.com/OWASP/Amass)
-- [assetfinder](https://github.com/tomnomnom/assetfinder)
-- [waymore](https://github.com/xnl-h4ck3r/waymore)
-- [subzy](https://github.com/LukaSikic/subzy)
-- [secretx](https://github.com/Somchandra17/secretx)
-- [katana](https://github.com/projectdiscovery/katana)
-
-These tools must be installed and accessible in your system's PATH for TrashRecon to function correctly.
-
 ## Installation
 
 ### Using Docker (Easy to use and No setup!)
-
-1. Pull the Docker image:
+1. Go to the cloned directory:
    ```bash
-   docker pull 0xsom/trashrecon-gui:latest
+   cd TrashRecon
    ```
-2. Run the Docker container:
+
+3. Build the Docker image:
    ```bash
-   docker run -it -p 5000:5000 0xsom/trashrecon-gui:latest
+   docker build -t trashrecon-gui .
+   ```
+4. Run the Docker container:
+   ```bash
+   docker run -it -p 5000:5000 0xsom/trashrecon-gui
    ```
 
 ---
@@ -62,30 +43,13 @@ These tools must be installed and accessible in your system's PATH for TrashReco
    ```bash
    cd TrashRecon
    ```
-3. Install the required tools and dependencies:
 
-| Tool            | Installation Command                                                                 | Path to Copy Wordlist |
-|-----------------|--------------------------------------------------------------------------------------|-----------------------|
-| Python 3.x      | Already installed or `sudo apt-get install python3`                                  |                       |
-| pip             | `sudo apt-get install python3-pip`                                                   |                       |
-| puredns         | `go install -v github.com/d3mondev/puredns/v2@latest`                                | `/root/.config/puredns/resolvers.txt` |
-| httpx           | `go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest`                   |                       |
-| dnsx            | `go install -v github.com/projectdiscovery/dnsx/cmd/dnsx@latest`                     |                       |
-| smap            | `go install -v github.com/s0md3v/smap/cmd/smap@latest`                               |                       |
-| aquatone        | `go install -v github.com/Abhinandan-Khurana/aquatone@v1.7.2`                        |                       |
-| waybackurls     | `go install -v github.com/tomnomnom/waybackurls@latest`                              |                       |
-| gf              | `go install -v github.com/tomnomnom/gf@latest`                                       |                       |
-| subzy           | `go install -v github.com/LukaSikic/subzy@latest`                                    |                       |
-| subfinder       | `go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest`        |                       |
-| amass           | `go install -v github.com/owasp-amass/amass/v3.19.2/...@master`                      |                       |
-| assetfinder     | `go install -v github.com/tomnomnom/assetfinder@latest`                              |                       |
-| waymore         | `pip install waymore --break-system-packages`                                        |                       |
-| massdns         | `git clone https://github.com/blechschmidt/massdns.git && cd massdns && make && make install` | `/app/subdomains-top1million-110000.txt` |
-| gf-patterns     | `git clone https://github.com/1ndianl33t/Gf-Patterns /root/.gf`                      |                       |
-| katana          | 'go install -v github.com/projectdiscovery/katana/cmd/katana@latest'                 |                       |
-| secretx         | 'git clone https://github.com/Somchandra17/secretx.git'                              |                       |
+## ScreenShots
 
-4. Ensure the external tools listed in the Prerequisites section are installed and in your system's PATH.
+1. ![image](https://github.com/user-attachments/assets/4c1efc66-1d3c-4419-a0cf-6f618d9ed796)
+2. ![image](https://github.com/user-attachments/assets/855c88e0-c7cd-4c2c-97da-bc2171dfb39d)
+
+
 
 ## Usage
 
@@ -93,7 +57,7 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 
 1. Run the Docker container:
    ```bash
-   docker run -it -p 5000:5000 0xsom/trashrecon-gui:latest
+   docker run -it -p 5000:5000 trashrecon-gui
    ```
 
 2. Open a web browser and navigate to `http://localhost:5000` to access the TrashRecon web interface.
