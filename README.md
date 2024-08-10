@@ -96,6 +96,6 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 
 3. To start using TrashRecon on host, run the following command from the TrashRecon directory:
 
-```bash
+   ```bash
    python3 trashrecon.py
-```
+   ```
