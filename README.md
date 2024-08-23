@@ -82,8 +82,8 @@ These tools must be installed and accessible in your system's PATH for TrashReco
 | waymore         | `pip install waymore --break-system-packages`                                        |                       |
 | massdns         | `git clone https://github.com/blechschmidt/massdns.git && cd massdns && make && make install` | `/app/subdomains-top1million-110000.txt` |
 | gf-patterns     | `git clone https://github.com/1ndianl33t/Gf-Patterns /root/.gf`                      |                       |
-| katana          | 'go install -v github.com/projectdiscovery/katana/cmd/katana@latest'                 |                       |
-| secretx         | 'git clone https://github.com/Somchandra17/secretx.git'                              |                       |
+| katana          | `go install -v github.com/projectdiscovery/katana/cmd/katana@latest`                 |                       |
+| secretx         | `git clone https://github.com/Somchandra17/secretx.git`                              |                       |
 
 4. Ensure the external tools listed in the Prerequisites section are installed and in your system's PATH.
 
