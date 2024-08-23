@@ -59,22 +59,6 @@ def phase_one(domain_path, domain):
     run_command(f"cat {os.path.join(domain_path, 'final_subdomains.txt')} | httpx -mc 200,301,302,307,308 | sed 's/https:\/\///' | sort -u > {os.path.join(domain_path, 'workingdomains.txt')}", cwd=domain_path)
     print("Done running httpx on the final list of subdomains.")
 
-def phase_five(domain_path, domain):
-    message = "Starting Phase 7: GF Enumeration."
-    run_command(f'/usr/games/cowthink "{message}"')
-
-    gf_folder = os.path.join(domain_path, "GF")
-    os.makedirs(gf_folder, exist_ok=True)
-    gf_patterns = ["xss", "idor", "lfi", "debug_logic", "img-traversal", "interestingEXT", "interestingparams", "interestingsubs", "jsvar", "rce", "redirect", "sqli", "ssrf", "ssti"]
-    
-    # Merging merged_way.txt and endpoints.txt
-    run_command(f"cat {os.path.join(domain_path, 'merged_way.txt')} {os.path.join(domain_path, 'endpoints.txt')} | sort -u | uniq > {os.path.join(domain_path, 'merged_endpoints.txt')}", cwd=domain_path)
-    print("Done merging merged_way.txt and endpoints.txt.")
-    
-    for pattern in gf_patterns:
-        output_file = os.path.join(gf_folder, f"{pattern}.txt")
-        run_command(f"cat {os.path.join(domain_path, 'merged_endpoints.txt')} | gf {pattern} | sort -u > {output_file}", cwd=domain_path)
-
 def phase_two(domain_path):
     message = "Starting Phase 2: Extracting A and CNAME Records."
     run_command(f'/usr/games/cowthink "{message}"')
@@ -94,6 +78,21 @@ def phase_four(domain_path, domain):
     aquatone_folder = os.path.join(domain_path, "aquatone")
     run_command(f"cat {os.path.join(domain_path, 'workingdomains.txt')} | aquatone -chrome-path /usr/bin/chromium -out {aquatone_folder}", cwd=domain_path)
 
+def phase_five(domain_path, domain):
+    message = "Starting Phase 7: GF Enumeration."
+    run_command(f'/usr/games/cowthink "{message}"')
+
+    gf_folder = os.path.join(domain_path, "GF")
+    os.makedirs(gf_folder, exist_ok=True)
+    gf_patterns = ["xss", "idor", "lfi", "debug_logic", "img-traversal", "interestingEXT", "interestingparams", "interestingsubs", "jsvar", "rce", "redirect", "sqli", "ssrf", "ssti"]
+    
+    # Merging merged_way.txt and endpoints.txt
+    run_command(f"cat {os.path.join(domain_path, 'merged_way.txt')} {os.path.join(domain_path, 'endpoints.txt')} | sort -u | uniq > {os.path.join(domain_path, 'merged_endpoints.txt')}", cwd=domain_path)
+    print("Done merging merged_way.txt and endpoints.txt.")
+    
+    for pattern in gf_patterns:
+        output_file = os.path.join(gf_folder, f"{pattern}.txt")
+        run_command(f"cat {os.path.join(domain_path, 'merged_endpoints.txt')} | gf {pattern} | sort -u > {output_file}", cwd=domain_path)
 def phase_six(domain_path, domain):
     message = "Starting Phase 5: Checking for Subdomains Takeover(subzy)."
     run_command(f'/usr/games/cowthink "{message}"')
