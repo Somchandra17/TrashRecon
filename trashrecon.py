@@ -163,9 +163,7 @@ def main():
    \ \_\  \ \_\ \_\  \ \_\ \_\  \/\_____\  \ \_\ \_\     \ \_\ \_\  \ \_____\  \ \_____\  \ \_____\  \ \_\\"\_\ 
     \/_/   \/_/ /_/   \/_/\/_/   \/_____/   \/_/\/_/      \/_/ /_/   \/_____/   \/_____/   \/_____/   \/_/ \/_/ 
                                                                                                                 
-                                                Tools: puredns, httpx, dnsx, smap, aquatone, waybackurls, gf,
-                                                      massdns, subzy, waymore, assetfinder, subfinder, amass,
-                                                      katana, secretx
+                                                                                                    By - 0xs0m
           
 
     """)
