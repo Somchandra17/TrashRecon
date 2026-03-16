@@ -64,7 +64,7 @@ All results are saved to `~/TrashRecon/<domain>/` (bind-mounted in Docker):
 ### Docker (recommended)
 
 ```bash
-docker pull 0xsom/trashrecon:latest
+docker pull 0xs0m/trashrecon:latest
 ```
 
 ```bash
