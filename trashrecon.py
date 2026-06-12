@@ -1,15 +1,23 @@
 import sys
 import os
+import argparse
 import subprocess
 import threading
 import time
 import re
 import random
+import shlex
+import shutil
 import string
 import json
 import signal
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Shell-quote helper for interpolating paths/values into shell=True commands.
+sq = shlex.quote
+
+__version__ = "1.1.0"
 
 # =============================================================================
 # Configuration
@@ -18,6 +26,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BANNER_PATH = os.path.join(SCRIPT_DIR, "banner.txt")
 WORDLIST_PATH = os.path.expanduser("~/app/subdomains-top1million-110000.txt")
+
+DEFAULT_OUTPUT_DIR = os.path.expanduser("~/TrashRecon")
+TOTAL_PHASES = 10
 
 DEFAULT_TIMEOUT = 3600
 
@@ -39,8 +50,34 @@ TOOL_TIMEOUTS = {
     'nuclei': 14400,
 }
 
+# External CLI binaries each phase invokes, used for the startup preflight.
+# Phase 9's secretx runs as `python3 secretx.py` (not a PATH binary) and fails
+# gracefully via run_tool, so it is intentionally omitted here.
+PHASE_TOOLS = {
+    1: ['puredns', 'subfinder', 'amass', 'assetfinder', 'waybackurls', 'waymore', 'httpx', 'dnsx'],
+    2: ['dnsx'],
+    3: ['asnmap'],
+    4: ['smap'],
+    5: ['aquatone', 'chromium'],
+    6: ['subzy'],
+    7: ['katana'],
+    8: ['gf'],
+    10: ['nuclei'],
+}
+
 done = threading.Event()
 _start_time = 0
+
+# Parsed CLI arguments (argparse.Namespace), set in main().
+ARGS = None
+
+# Serializes all console + log writes so parallel tools and the spinner
+# never interleave or clobber each other's lines.
+_print_lock = threading.Lock()
+
+# Set while an interactive prompt is awaiting input; pauses the spinner
+# so it doesn't overwrite the prompt line.
+_prompt_active = threading.Event()
 
 # =============================================================================
 # Colors
@@ -55,6 +92,13 @@ class C:
     G     = '\033[32m'
     Y     = '\033[33m'
     GR    = '\033[90m'
+
+
+def _disable_colors():
+    """Blank every color constant so all C.* references emit plain text."""
+    for k in vars(C):
+        if not k.startswith('__'):
+            setattr(C, k, '')
 
 # =============================================================================
 # Logging — dual output to console (colored) and log file (plain)
@@ -77,14 +121,22 @@ def _log_raw(msg):
     """Write to log file only (ANSI-stripped)."""
     if _log_file:
         clean = _ANSI_RE.sub('', str(msg))
-        _log_file.write(f"[{time.strftime('%H:%M:%S')}] {clean}\n")
-        _log_file.flush()
+        with _print_lock:
+            _log_file.write(f"[{time.strftime('%H:%M:%S')}] {clean}\n")
+            _log_file.flush()
 
 
 def log(msg=''):
     """Print to console and write to log file."""
-    print(msg)
-    _log_raw(msg)
+    with _print_lock:
+        # Wipe any leftover spinner glyph on the current terminal line.
+        if sys.stdout.isatty():
+            sys.stdout.write('\r\033[K')
+        print(msg)
+        if _log_file:
+            clean = _ANSI_RE.sub('', str(msg))
+            _log_file.write(f"[{time.strftime('%H:%M:%S')}] {clean}\n")
+            _log_file.flush()
 
 # =============================================================================
 # Output helpers
@@ -131,10 +183,28 @@ def validate_domain(domain):
 
 
 def safe_input(prompt):
+    # Pause the spinner and clear its line so it can't overwrite the prompt.
+    _prompt_active.set()
     try:
+        if sys.stdout.isatty():
+            with _print_lock:
+                sys.stdout.write('\r\033[K')
+                sys.stdout.flush()
         return input(prompt).strip()
     except (EOFError, KeyboardInterrupt):
         return ''
+    finally:
+        _prompt_active.clear()
+
+
+def confirm(prompt):
+    """Yes/no gate for optional phases. Auto-yes with --yes; in a
+    non-interactive session with no --yes, default to no."""
+    if ARGS is not None and ARGS.yes:
+        return True
+    if not sys.stdin.isatty():
+        return False
+    return safe_input(prompt).lower() == 'yes'
 
 
 def run_command(command, cwd=None, timeout=DEFAULT_TIMEOUT):
@@ -219,7 +289,7 @@ def check_wildcard_dns(domain):
     test = f"{random_sub}.{domain}"
     try:
         result = subprocess.run(
-            f"echo '{test}' | dnsx -silent -nc",
+            f"echo {sq(test)} | dnsx -silent -nc",
             shell=True, capture_output=True, timeout=30, text=True
         )
         return bool(result.stdout.strip())
@@ -267,8 +337,19 @@ def run_tool(name, command, cwd, output_file=None, timeout=DEFAULT_TIMEOUT):
     return success
 
 
+def check_dependencies(skip):
+    """Return the sorted list of CLI tools missing from PATH, considering only
+    the phases that will actually run (i.e. not in `skip`)."""
+    required = set()
+    for phase, tools in PHASE_TOOLS.items():
+        if phase not in skip:
+            required.update(tools)
+    return sorted(t for t in required if shutil.which(t) is None)
+
+
 def create_domain_folder(domain):
-    domain_path = os.path.expanduser(f"~/TrashRecon/{domain}")
+    base = ARGS.output if ARGS is not None else DEFAULT_OUTPUT_DIR
+    domain_path = os.path.join(os.path.expanduser(base), domain)
     os.makedirs(domain_path, exist_ok=True)
     return domain_path
 
@@ -315,20 +396,20 @@ def phase_one(domain_path, domain):
         print_success("No wildcard DNS detected.")
 
     run_tool('puredns',
-             f"puredns bruteforce {WORDLIST_PATH} {domain} > {j('puredns.txt')}",
+             f"puredns bruteforce {sq(WORDLIST_PATH)} {sq(domain)} > {sq(j('puredns.txt'))}",
              cwd=domain_path, output_file=j('puredns.txt'),
              timeout=TOOL_TIMEOUTS['puredns'])
 
     passive_tools = {
-        'subfinder':   (f"subfinder -nc -silent -d {domain} > {j('subfinder.txt')}",
+        'subfinder':   (f"subfinder -nc -silent -d {sq(domain)} > {sq(j('subfinder.txt'))}",
                         j('subfinder.txt')),
-        'amass':       (f"amass enum -passive -nocolor -d {domain} > {j('amass.txt')}",
+        'amass':       (f"amass enum -passive -nocolor -d {sq(domain)} > {sq(j('amass.txt'))}",
                         j('amass.txt')),
-        'assetfinder': (f"assetfinder -subs-only {domain} > {j('assetfinder.txt')}",
+        'assetfinder': (f"assetfinder -subs-only {sq(domain)} > {sq(j('assetfinder.txt'))}",
                         j('assetfinder.txt')),
-        'waybackurls': (f"waybackurls {domain} > {j('wayback.txt')}",
+        'waybackurls': (f"waybackurls {sq(domain)} > {sq(j('wayback.txt'))}",
                         j('wayback.txt')),
-        'waymore':     (f"waymore -i {domain} -mode U -oU {j('waymore.txt')}",
+        'waymore':     (f"waymore -i {sq(domain)} -mode U -oU {sq(j('waymore.txt'))}",
                         j('waymore.txt')),
     }
 
@@ -341,7 +422,11 @@ def phase_one(domain_path, domain):
             )
             futures[future] = name
         for future in as_completed(futures):
-            pass
+            name = futures[future]
+            try:
+                future.result()
+            except Exception as e:
+                print_error(f"{name} crashed: {e}")
 
     print_running("Merging and deduplicating results...")
     merge_files([j('wayback.txt'), j('waymore.txt')], j('merged_way.txt'))
@@ -368,8 +453,8 @@ def phase_one(domain_path, domain):
 
     print_running("Probing live hosts with httpx...")
     run_command(
-        f"cat {j('final_subdomains.txt')} | httpx -nc -silent -mc 200,301,302,307,308 "
-        f"> {j('httpx_raw.txt')}",
+        f"cat {sq(j('final_subdomains.txt'))} | httpx -nc -silent -mc 200,301,302,307,308 "
+        f"> {sq(j('httpx_raw.txt'))}",
         cwd=domain_path, timeout=TOOL_TIMEOUTS['httpx']
     )
     live = extract_hostnames(j('httpx_raw.txt'), j('workingdomains.txt'))
@@ -383,13 +468,13 @@ def phase_two(domain_path):
     t = TOOL_TIMEOUTS['dnsx']
 
     run_tool('dnsx (A records)',
-             f"cat {w} | dnsx -a -resp -nc | sort -u > {j('a_records.txt')}",
+             f"cat {sq(w)} | dnsx -a -resp -nc | sort -u > {sq(j('a_records.txt'))}",
              cwd=domain_path, output_file=j('a_records.txt'), timeout=t)
     run_tool('dnsx (CNAME)',
-             f"cat {w} | dnsx -silent -cname -resp -nc > {j('cname.txt')}",
+             f"cat {sq(w)} | dnsx -silent -cname -resp -nc > {sq(j('cname.txt'))}",
              cwd=domain_path, output_file=j('cname.txt'), timeout=t)
     run_tool('dnsx (IPs)',
-             f"cat {w} | dnsx -a -ro -nc | sort -u > {j('IPs.txt')}",
+             f"cat {sq(w)} | dnsx -a -ro -nc | sort -u > {sq(j('IPs.txt'))}",
              cwd=domain_path, output_file=j('IPs.txt'), timeout=t)
 
     print_success(f"Phase 2 complete: {C.BOLD}{count_lines(j('IPs.txt'))}{C.RESET} unique IPs")
@@ -400,7 +485,7 @@ def phase_three(domain_path):
     j = lambda f: os.path.join(domain_path, f)
 
     run_tool('asnmap',
-             f"cat {j('IPs.txt')} | asnmap -silent -json > {j('asn_info.json')}",
+             f"cat {sq(j('IPs.txt'))} | asnmap -silent -json > {sq(j('asn_info.json'))}",
              cwd=domain_path, output_file=j('asn_info.json'),
              timeout=TOOL_TIMEOUTS['asnmap'])
 
@@ -417,7 +502,7 @@ def phase_four(domain_path):
     print_info(f"Scanning {ip_count} unique IPs (all ports)")
 
     run_tool('smap',
-             f"smap -Pn -p0-65535 -iL {j('IPs.txt')} -oJ {j('port_scan.json')}",
+             f"smap -Pn -p0-65535 -iL {sq(j('IPs.txt'))} -oJ {sq(j('port_scan.json'))}",
              cwd=domain_path, output_file=j('port_scan.json'),
              timeout=TOOL_TIMEOUTS['smap'])
     print_success("Phase 4 complete")
@@ -435,9 +520,9 @@ def phase_five(domain_path):
         return
 
     run_tool('aquatone',
-             f"cat {j('httpx_raw.txt')} | aquatone -chrome-path /usr/bin/chromium "
+             f"cat {sq(j('httpx_raw.txt'))} | aquatone -chrome-path /usr/bin/chromium "
              f"-scan-timeout 1000 -screenshot-timeout 30000 "
-             f"-out {aquatone_dir}",
+             f"-out {sq(aquatone_dir)}",
              cwd=domain_path, timeout=TOOL_TIMEOUTS['aquatone'])
     print_success("Phase 5 complete")
 
@@ -447,7 +532,7 @@ def phase_six(domain_path):
     j = lambda f: os.path.join(domain_path, f)
 
     run_tool('subzy',
-             f"subzy run --targets {j('workingdomains.txt')} > {j('subdomains_takeover.txt')}",
+             f"subzy run --targets {sq(j('workingdomains.txt'))} > {sq(j('subdomains_takeover.txt'))}",
              cwd=domain_path, output_file=j('subdomains_takeover.txt'),
              timeout=TOOL_TIMEOUTS['subzy'])
     print_success("Phase 6 complete")
@@ -459,15 +544,13 @@ def phase_seven(domain_path, domain):
 
     print_question(f"Phase 7 will crawl endpoints on {working_count} live hosts.")
     log("      This can be time-consuming on large surfaces.")
-    proceed = safe_input(f"      proceed? (yes/no): ").lower()
-
-    if proceed != 'yes':
+    if not confirm("      proceed? (yes/no): "):
         print_skip("Phase 7")
         return False
 
     print_phase(7, "Endpoint Crawling")
     run_tool('katana',
-             f"katana -u {j('workingdomains.txt')} -d 5 -jsl -jc -o {j('endpoints.txt')}",
+             f"katana -u {sq(j('workingdomains.txt'))} -d 5 -jsl -jc -o {sq(j('endpoints.txt'))}",
              cwd=domain_path, output_file=j('endpoints.txt'),
              timeout=TOOL_TIMEOUTS['katana'])
 
@@ -496,7 +579,7 @@ def phase_eight(domain_path):
     for pattern in gf_patterns:
         outfile = os.path.join(gf_folder, f"{pattern}.txt")
         run_command(
-            f"cat {j('merged_endpoints.txt')} | gf {pattern} | sort -u > {outfile}",
+            f"cat {sq(j('merged_endpoints.txt'))} | gf {sq(pattern)} | sort -u > {sq(outfile)}",
             cwd=domain_path, timeout=300
         )
 
@@ -520,16 +603,14 @@ def phase_nine(domain_path):
         return
 
     print_question("Phase 9 scans for exposed API keys (resource-intensive).")
-    proceed = safe_input(f"      proceed? (yes/no): ").lower()
-
-    if proceed != 'yes':
+    if not confirm("      proceed? (yes/no): "):
         print_skip("Phase 9")
         return
 
     print_phase(9, "API Key Scanning")
     run_tool('secretx',
-             f"python3 secretx.py --list {j('endpoints.txt')} --threads 60 "
-             f"--output {j('api.txt')}",
+             f"python3 secretx.py --list {sq(j('endpoints.txt'))} --threads 60 "
+             f"--output {sq(j('api.txt'))}",
              cwd="/app/secretx/", output_file=j('api.txt'),
              timeout=TOOL_TIMEOUTS['secretx'])
     print_success("Phase 9 complete")
@@ -545,15 +626,13 @@ def phase_ten(domain_path):
 
     print_question(f"Phase 10 runs nuclei against {working_count} live hosts.")
     log("      This is very resource-intensive and can take hours.")
-    proceed = safe_input(f"      proceed? (yes/no): ").lower()
-
-    if proceed != 'yes':
+    if not confirm("      proceed? (yes/no): "):
         print_skip("Phase 10")
         return
 
     print_phase(10, "Nuclei Vulnerability Scanning")
     run_tool('nuclei',
-             f"nuclei -l {j('workingdomains.txt')} -j -o {j('nuclei.jsonl')} -silent -nc",
+             f"nuclei -l {sq(j('workingdomains.txt'))} -j -o {sq(j('nuclei.jsonl'))} -silent -nc",
              cwd=domain_path, output_file=j('nuclei.jsonl'),
              timeout=TOOL_TIMEOUTS['nuclei'])
 
@@ -591,6 +670,11 @@ def write_json_summary(domain_path, domain):
         "nuclei": [],
         "endpoints": {
             "total": count_lines(j('endpoints.txt')),
+            "list": read_lines(j('endpoints.txt')),
+        },
+        "api_keys": {
+            "total": count_lines(j('api.txt')),
+            "list": read_lines(j('api.txt')),
         },
     }
 
@@ -661,6 +745,10 @@ def summarize_results(domain_path):
         c = C.W if gf_total > 0 else C.GR
         log(f"  {c}  {'GF matches':<20} {gf_total}{C.RESET}")
 
+    api_count = count_lines(j('api.txt'))
+    c = C.R if api_count > 0 else C.GR
+    log(f"  {c}  {'api keys':<20} {api_count}{C.RESET}")
+
     nuclei_count = count_lines(j('nuclei.jsonl'))
     c = C.R if nuclei_count > 0 else C.GR
     log(f"  {c}  {'nuclei findings':<20} {nuclei_count}{C.RESET}")
@@ -681,31 +769,95 @@ def animate():
     chars = '|/-\\'
     i = 0
     while not done.is_set():
-        sys.stdout.write(f'\r  {C.GR}[{chars[i]}]{C.RESET}')
-        sys.stdout.flush()
+        if not _prompt_active.is_set():
+            with _print_lock:
+                sys.stdout.write(f'\r  {C.GR}[{chars[i]}]{C.RESET}')
+                sys.stdout.flush()
+            i = (i + 1) % len(chars)
         time.sleep(0.1)
-        i = (i + 1) % len(chars)
-    sys.stdout.write('\r     \r')
+    with _print_lock:
+        sys.stdout.write('\r\033[K')
+        sys.stdout.flush()
+
+
+def parse_skip_phases(raw):
+    """Parse a comma-separated list of phase numbers into a set of ints."""
+    skip = set()
+    for part in raw.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            n = int(part)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"not a phase number: '{part}'")
+        if not 1 <= n <= TOTAL_PHASES:
+            raise argparse.ArgumentTypeError(
+                f"phase out of range (1-{TOTAL_PHASES}): {n}")
+        skip.add(n)
+    return skip
+
+
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(
+        prog="trashrecon",
+        description="Automated reconnaissance framework — 17 tools, 10 phases.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "examples:\n"
+            "  trashrecon example.com\n"
+            "  trashrecon example.com --yes\n"
+            "  trashrecon example.com --skip-phases 4,5,10 -o /data/recon\n"
+        ),
+    )
+    parser.add_argument("domain", nargs="?",
+                        help="target domain (prompted if omitted on a TTY)")
+    parser.add_argument("-y", "--yes", "--non-interactive",
+                        dest="yes", action="store_true",
+                        help="auto-proceed optional phases (7, 9, 10) without prompting")
+    parser.add_argument("-o", "--output", default=DEFAULT_OUTPUT_DIR,
+                        metavar="DIR",
+                        help=f"output base directory (default: {DEFAULT_OUTPUT_DIR})")
+    parser.add_argument("--skip-phases", dest="skip_phases",
+                        type=parse_skip_phases, default=set(), metavar="LIST",
+                        help="comma-separated phase numbers to skip, e.g. 4,5,10")
+    parser.add_argument("--wordlist", default=WORDLIST_PATH, metavar="PATH",
+                        help="subdomain brute-force wordlist (default: bundled list)")
+    parser.add_argument("--no-color", dest="no_color", action="store_true",
+                        help="disable colored output (also honors NO_COLOR)")
+    parser.add_argument("--version", action="version",
+                        version=f"%(prog)s {__version__}")
+    return parser.parse_args(argv)
 
 
 def main():
+    global ARGS, WORDLIST_PATH
+    ARGS = parse_args()
+    WORDLIST_PATH = os.path.expanduser(ARGS.wordlist)
+
+    # Plain text when explicitly disabled, when NO_COLOR is set, or when stdout
+    # isn't a terminal (piped/redirected/headless).
+    if ARGS.no_color or os.environ.get('NO_COLOR') or not sys.stdout.isatty():
+        _disable_colors()
+
     print_banner()
 
-    if len(sys.argv) > 1:
-        domain = sys.argv[1].strip()
-    elif sys.stdin.isatty():
-        try:
-            domain = input(f"  {C.W}target:{C.RESET} ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\n  aborted.")
-            sys.exit(0)
-    else:
-        print(f"\n  {C.R}[!]{C.RESET} no domain provided.\n")
-        print(f"  usage:")
-        print(f"    docker run --rm -v ~/TrashRecon:/root/TrashRecon trashrecon <domain>")
-        print(f"    docker run -it --rm -v ~/TrashRecon:/root/TrashRecon trashrecon\n")
-        sys.exit(1)
+    domain = ARGS.domain.strip() if ARGS.domain else ''
+    if not domain:
+        if sys.stdin.isatty():
+            try:
+                domain = input(f"  {C.W}target:{C.RESET} ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print("\n  aborted.")
+                sys.exit(0)
+        else:
+            print(f"\n  {C.R}[!]{C.RESET} no domain provided.\n")
+            print(f"  usage:")
+            print(f"    docker run --rm -v ~/TrashRecon:/root/TrashRecon 0xs0m/trashrecon <domain>")
+            print(f"    docker run -it --rm -v ~/TrashRecon:/root/TrashRecon 0xs0m/trashrecon\n")
+            sys.exit(1)
 
+    domain = domain.lower()
     if not validate_domain(domain):
         log(f"  {C.R}[!]{C.RESET} invalid domain: '{domain}'")
         sys.exit(1)
@@ -723,24 +875,51 @@ def main():
     log(f"  {C.GR}output{C.RESET}  {domain_path}")
     log()
 
-    animation_thread = threading.Thread(target=animate, daemon=True)
-    animation_thread.start()
+    # Only animate on a real terminal — piped/headless logs stay clean.
+    animation_thread = None
+    if sys.stdout.isatty():
+        animation_thread = threading.Thread(target=animate, daemon=True)
+        animation_thread.start()
+
+    skip = ARGS.skip_phases
+    if skip:
+        print_info(f"Skipping phases: {', '.join(str(n) for n in sorted(skip))}")
+
+    missing = check_dependencies(skip)
+    if missing:
+        print_warning(f"Missing tools (not on PATH): {', '.join(missing)}")
+        print_warning("Affected phases will produce no results.")
+        if not confirm("      continue anyway? (yes/no): "):
+            print_error("Aborting. Install the missing tools or use --skip-phases.")
+            sys.exit(1)
+
+    def should(n):
+        return n not in skip
 
     global _start_time
     _start_time = time.time()
     try:
-        phase_one(domain_path, domain)
-        phase_two(domain_path)
-        phase_three(domain_path)
-        phase_four(domain_path)
-        phase_five(domain_path)
-        phase_six(domain_path)
+        if should(1):
+            phase_one(domain_path, domain)
+        if should(2):
+            phase_two(domain_path)
+        if should(3):
+            phase_three(domain_path)
+        if should(4):
+            phase_four(domain_path)
+        if should(5):
+            phase_five(domain_path)
+        if should(6):
+            phase_six(domain_path)
 
-        if phase_seven(domain_path, domain):
-            phase_eight(domain_path)
-            phase_nine(domain_path)
+        if should(7) and phase_seven(domain_path, domain):
+            if should(8):
+                phase_eight(domain_path)
+            if should(9):
+                phase_nine(domain_path)
 
-        phase_ten(domain_path)
+        if should(10):
+            phase_ten(domain_path)
 
         write_json_summary(domain_path, domain)
         summarize_results(domain_path)
@@ -759,7 +938,8 @@ def main():
         if _log_file:
             _log_file.close()
         done.set()
-        animation_thread.join(timeout=2)
+        if animation_thread is not None:
+            animation_thread.join(timeout=2)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Tooling / editor
+.codegraph/
+.cursor/
+.idea/
+.vscode/
+
+# Scan output (when run from the repo dir)
+TrashRecon/
+
+# OS
+.DS_Store

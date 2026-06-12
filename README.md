@@ -68,13 +68,13 @@ docker pull 0xs0m/trashrecon:latest
 ```
 
 ```bash
-docker run --rm -v ~/TrashRecon:/root/TrashRecon trashrecon example.com
+docker run --rm -v ~/TrashRecon:/root/TrashRecon 0xs0m/trashrecon example.com
 ```
 
 Or run interactively (prompts for domain):
 
 ```bash
-docker run -it --rm -v ~/TrashRecon:/root/TrashRecon trashrecon
+docker run -it --rm -v ~/TrashRecon:/root/TrashRecon 0xs0m/trashrecon
 ```
 
 ### Build from source
@@ -85,6 +85,34 @@ cd TrashRecon
 docker buildx build -t trashrecon .
 docker run --rm -v ~/TrashRecon:/root/TrashRecon trashrecon example.com
 ```
+
+## Usage
+
+```
+trashrecon [domain] [options]
+
+positional:
+  domain                 target domain (prompted if omitted on a TTY)
+
+options:
+  -y, --yes,             auto-proceed the optional phases (7, 9, 10)
+      --non-interactive  without prompting — required for headless runs
+  -o, --output DIR       output base directory (default: ~/TrashRecon)
+  --skip-phases LIST     comma-separated phase numbers to skip, e.g. 4,5,10
+  --wordlist PATH        subdomain brute-force wordlist (default: bundled list)
+  --version              print version and exit
+  -h, --help             show help and exit
+```
+
+Headless run (no TTY) — pass `--yes` so the interactive phases still execute:
+
+```bash
+docker run --rm -v ~/TrashRecon:/root/TrashRecon 0xs0m/trashrecon example.com --yes
+```
+
+> **Note:** `--skip-phases` is best-effort. Phases run in sequence and later
+> phases consume earlier output (e.g. Phase 2 needs Phase 1's live hosts), so
+> skipping an early phase may leave downstream phases with nothing to process.
 
 ## Updating Wordlists & Resolvers
 
