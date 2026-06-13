@@ -182,6 +182,14 @@ def validate_domain(domain):
     return bool(re.match(pattern, domain)) and len(domain) <= 253
 
 
+def in_scope(host, domain):
+    """True if host is the domain itself or a subdomain of it. Boundary-aware,
+    so 'example.com.evil.net' and 'notexample.com' are correctly rejected."""
+    host = host.strip().lower().rstrip('.')
+    domain = domain.strip().lower().rstrip('.')
+    return host == domain or host.endswith('.' + domain)
+
+
 def safe_input(prompt):
     # Pause the spinner and clear its line so it can't overwrite the prompt.
     _prompt_active.set()
@@ -213,7 +221,7 @@ def run_command(command, cwd=None, timeout=DEFAULT_TIMEOUT):
         process = subprocess.Popen(
             command, shell=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            cwd=cwd, preexec_fn=os.setsid
+            cwd=cwd, start_new_session=True
         )
         stdout, stderr = process.communicate(timeout=timeout)
         if stdout:
@@ -272,7 +280,7 @@ def extract_hostnames(input_file, output_file, filter_domain=None):
                     if not hostname:
                         continue
                     hostname = hostname.lower()
-                    if filter_domain is None or filter_domain in hostname:
+                    if filter_domain is None or in_scope(hostname, filter_domain):
                         hostnames.add(hostname)
                 except Exception:
                     continue
@@ -443,7 +451,8 @@ def phase_one(domain_path, domain):
 
     try:
         with open(j('raw.txt'), 'r') as f:
-            filtered = sorted(set(l.strip() for l in f if domain in l.strip()))
+            filtered = sorted({h for h in (l.strip().lower() for l in f)
+                               if h and in_scope(h, domain)})
         with open(j('final_subdomains.txt'), 'w') as f:
             if filtered:
                 f.write('\n'.join(filtered) + '\n')
@@ -531,8 +540,10 @@ def phase_six(domain_path):
     print_phase(6, "Subdomain Takeover Check")
     j = lambda f: os.path.join(domain_path, f)
 
+    # Scan all resolved subdomains, not just live hosts — takeover candidates
+    # are usually dangling hosts that httpx's status filter would have dropped.
     run_tool('subzy',
-             f"subzy run --targets {sq(j('workingdomains.txt'))} > {sq(j('subdomains_takeover.txt'))}",
+             f"subzy run --targets {sq(j('final_subdomains.txt'))} > {sq(j('subdomains_takeover.txt'))}",
              cwd=domain_path, output_file=j('subdomains_takeover.txt'),
              timeout=TOOL_TIMEOUTS['subzy'])
     print_success("Phase 6 complete")
@@ -559,8 +570,13 @@ def phase_seven(domain_path, domain):
 
 
 def phase_eight(domain_path):
-    print_phase(8, "GF Pattern Enumeration")
     j = lambda f: os.path.join(domain_path, f)
+
+    if not file_ready(j('merged_way.txt')) and not file_ready(j('endpoints.txt')):
+        print_skip("Phase 8 (no URLs)")
+        return
+
+    print_phase(8, "GF Pattern Enumeration")
 
     gf_folder = j('GF')
     os.makedirs(gf_folder, exist_ok=True)
@@ -912,11 +928,13 @@ def main():
         if should(6):
             phase_six(domain_path)
 
-        if should(7) and phase_seven(domain_path, domain):
-            if should(8):
-                phase_eight(domain_path)
-            if should(9):
-                phase_nine(domain_path)
+        ran_seven = should(7) and phase_seven(domain_path, domain)
+        # Phase 8 runs on archived URLs (merged_way.txt) even without the crawl;
+        # Phase 9 needs the crawl's endpoints.txt, so it stays gated on Phase 7.
+        if should(8):
+            phase_eight(domain_path)
+        if ran_seven and should(9):
+            phase_nine(domain_path)
 
         if should(10):
             phase_ten(domain_path)

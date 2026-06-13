@@ -5,6 +5,11 @@ __pycache__/
 .venv/
 venv/
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
 # Tooling / editor
 .codegraph/
 .cursor/
